@@ -177,23 +177,19 @@ def cut_and_transform(original_image, points, width, height, balls, ball_size):
     warped_image = cv2.warpPerspective(original_image, matrix, (width, height))
 
     # ボール座標をperspective transformationして、絵を描く
-    """
+    
     # 元の点のリスト (x, y) 形式
-points = [(10, 20), (30, 40), (50, 60)]
-
-# 同次座標に変換
-points_homogeneous = np.array([list(point) + [1] for point in points])
-
-# ホモグラフィ行列による変換
-transformed_points_homogeneous = np.dot(points_homogeneous, H.T)  # 行列を転置して乗算
-
-# 同次座標から通常の座標への変換
-transformed_points = transformed_points_homogeneous[:, :2] / transformed_points_homogeneous[:, [2]]
-
-transformed_points
-
-    balls_transformed = 
-"""
+    points = [(x, y) for x, y, _ in balls]
+    # 同次座標に変換
+    points_homogeneous = np.array([list(point) + [1] for point in points])
+    # ホモグラフィ行列による変換
+    transformed_points_homogeneous = np.dot(points_homogeneous, matrix.T)  # 行列を転置して乗算
+    # 同次座標から通常の座標への変換
+    transformed_points = transformed_points_homogeneous[:, :2] / transformed_points_homogeneous[:, [2]]
+    # 円を描く
+    rwy_colors = ((0,0,255), (255,255,255), (0,255,255))
+    for i, point in enumerate(transformed_points):
+        cv2.circle(warped_image, (int(point[0]), int(point[1])), int(ball_size), rwy_colors[i], -1)
 
     # 結果の画像を表示する
     cv2.imshow('Warped Image', warped_image)
