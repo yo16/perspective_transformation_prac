@@ -164,11 +164,15 @@ def get_ball_positions(cv_image_original, vertices):
     ]
     print(rwy_balls)
 
+    # 円の下の位置をボールの位置とするため、半径分下にずらす
+    for ball in rwy_balls:
+        ball[1] += ball[2]
+
     return rwy_balls
 
 
 # perspective transformationで長方形へ変換
-def cut_and_transform(original_image, points, width, height, balls, ball_size):
+def cut_and_transform(original_image, points, width, height, balls, ball_r):
     src_points = np.float32(points)
     print(src_points)
 
@@ -201,7 +205,7 @@ def cut_and_transform(original_image, points, width, height, balls, ball_size):
     # 円を描く
     rwy_colors = ((0,0,255), (255,255,255), (0,255,255))
     for i, point in enumerate(transformed_points):
-        cv2.circle(warped_image, (int(point[0]), int(point[1])), int(ball_size), rwy_colors[i], -1)
+        cv2.circle(warped_image, (int(point[0]), int(point[1])), int(ball_r), rwy_colors[i], -1)
 
     # 結果の画像を表示する
     cv2.imshow('Warped Image', warped_image)
@@ -220,7 +224,7 @@ def main(image_path):
     image_scale = 2.0
     width = int(142 * image_scale)
     height = int(284 * image_scale)
-    ball_size = 6.15 * image_scale
+    ball_r = 6.15 / 2 * image_scale
 
     original_image = cv2.imread(image_path)
 
@@ -235,7 +239,7 @@ def main(image_path):
     print(rwy_balls)
 
     # perspective transformationで長方形へ変換
-    cut_and_transform(original_image, corners, width, height, rwy_balls, ball_size)
+    cut_and_transform(original_image, corners, width, height, rwy_balls, ball_r)
 
 
 
