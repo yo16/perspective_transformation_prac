@@ -174,17 +174,31 @@ def get_ball_positions(cv_image_original, vertices):
 
 
 # perspective transformationで長方形へ変換
-def cut_and_transform(original_image, points, width, height, balls, ball_r, out_image_path):
+def cut_and_transform(original_image, points, short_hand_width, long_hand_width, balls, ball_r, out_image_path):
     src_points = np.float32(points)
     print(src_points)
 
+    # 縦向き: True, 横向き: False
+    is_portrait = False
     # 真上から見たビリヤード台の四隅の座標 (x, y) (通常は四角形)
-    dst_points = np.float32([
-        [0, 0],
-        [width, 0],
-        [width, height],
-        [0, height]
-    ])
+    if is_portrait:
+        # 縦向き
+        dst_points = np.float32([
+            [0, 0],
+            [short_hand_width, 0],
+            [short_hand_width, long_hand_width],
+            [0, long_hand_width]
+        ])
+        image_size = (short_hand_width, long_hand_width)
+    else:
+        # 横向き
+        dst_points = np.float32([
+            [0, short_hand_width],
+            [0, 0],
+            [long_hand_width, 0],
+            [long_hand_width, short_hand_width]
+        ])
+        image_size = (long_hand_width, short_hand_width)
 
     # ホモグラフィ行列を計算する
     matrix = cv2.getPerspectiveTransform(src_points, np.array(dst_points))
@@ -192,7 +206,8 @@ def cut_and_transform(original_image, points, width, height, balls, ball_r, out_
     print(matrix)
 
     # 透視変換を実行する
-    warped_image = cv2.warpPerspective(original_image, matrix, (width, height))
+    warped_image = cv2.warpPerspective(original_image, matrix, image_size)
+    
 
     # ボール座標をperspective transformationして、絵を描く
     
@@ -224,8 +239,8 @@ def cut_and_transform(original_image, points, width, height, balls, ball_r, out_
 def main(image_path, out_image_path):
     # 画像を読み込む
     image_scale = 2.0
-    width = int(142 * image_scale)
-    height = int(284 * image_scale)
+    short_hand_width = int(142 * image_scale)
+    long_hand_width = int(284 * image_scale)
     ball_r = 6.15 / 2 * image_scale
 
     original_image = cv2.imread(image_path)
@@ -241,7 +256,7 @@ def main(image_path, out_image_path):
     print(rwy_balls)
 
     # perspective transformationで長方形へ変換
-    cut_and_transform(original_image, corners, width, height, rwy_balls, ball_r, out_image_path)
+    cut_and_transform(original_image, corners, short_hand_width, long_hand_width, rwy_balls, ball_r, out_image_path)
 
 
 
