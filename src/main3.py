@@ -189,47 +189,120 @@ def get_ball_positions(cv_image_original, vertices):
     return rwy_balls
 
 
+# 仮想の台を描く
+def draw_virtual_table(image_size, table_offset_float, cushion_width_float, is_portrait):
+    table_offset = int(table_offset_float)
+    cushion_width = int(cushion_width_float)
+
+    img = np.zeros((int(image_size[1]), int(image_size[0]), 3), dtype="uint8")
+    img.fill(255)
+
+    # クッションレール
+    color = (48, 48, 170)
+    points = [
+        [table_offset, table_offset],
+        [image_size[0] - table_offset, table_offset],
+        [image_size[0] - table_offset, image_size[1] - table_offset],
+        [table_offset, image_size[1] - table_offset]
+    ]
+    for i in range(4):
+        print(points[i])
+        cv2.circle(img, points[i], table_offset, color, thickness=cv2.FILLED)
+    cv2.rectangle(img, [table_offset, 0], [image_size[0]-table_offset, table_offset*2], color, thickness=cv2.FILLED)
+    cv2.rectangle(img, [table_offset, image_size[1]-table_offset*2], [image_size[0]-table_offset, image_size[1]], color, thickness=cv2.FILLED)
+    cv2.rectangle(img, [0, table_offset], [table_offset*2, image_size[1]-table_offset], color, thickness=cv2.FILLED)
+    cv2.rectangle(img, [image_size[0]-table_offset*2, table_offset], [image_size[0], image_size[1]-table_offset], color, thickness=cv2.FILLED)
+
+    # クッション
+    color = (220, 93, 11)
+    cv2.rectangle(img, [table_offset, table_offset], [image_size[0]-table_offset, table_offset+cushion_width], color, thickness=cv2.FILLED)
+    cv2.rectangle(img, [image_size[0]-table_offset-cushion_width, table_offset], [image_size[0]-table_offset, image_size[1]-table_offset], color, thickness=cv2.FILLED)
+    cv2.rectangle(img, [table_offset, image_size[1]-table_offset-cushion_width], [image_size[0]-table_offset, image_size[1]-table_offset], color, thickness=cv2.FILLED)
+    cv2.rectangle(img, [table_offset, table_offset], [table_offset+cushion_width, image_size[1]-table_offset], color, thickness=cv2.FILLED)
+
+    # ゲーム盤面
+    color = (247, 122, 54)
+    cv2.rectangle(img, [table_offset+cushion_width, table_offset+cushion_width], [image_size[0]-table_offset-cushion_width, image_size[1]-table_offset-cushion_width], color, thickness=cv2.FILLED)
+
+    # ポイント：長辺に７つ、短辺に３つ
+    color = (255, 255, 255)
+    game_area_long  = (image_size[1] if (image_size[0]<image_size[1]) else image_size[0]) - (table_offset+cushion_width)*2
+    game_area_short = (image_size[0] if (image_size[0]<image_size[1]) else image_size[1]) - (table_offset+cushion_width)*2
+    long_points = [int(i*(game_area_long/8) + table_offset + cushion_width) for i in range(1,8)]
+    short_points = [int(i*(game_area_short/4) + table_offset + cushion_width) for i in range(1,4)]
+    color = (255, 255, 255)
+    if is_portrait:
+        # 縦長
+        # long
+        for i in range(1,8):
+            cv2.circle(img, [int(table_offset - cushion_width), long_points[i-1]], 3, color, thickness=cv2.FILLED)
+            cv2.circle(img, [int(image_size[0] - table_offset + cushion_width), long_points[i-1]], 3, color, thickness=cv2.FILLED)
+        # short
+        for i in range(1, 4):
+            cv2.circle(img, [short_points[i-1], int(table_offset - cushion_width)], 3, color, thickness=cv2.FILLED)
+            cv2.circle(img, [short_points[i-1], int(image_size[1] - table_offset + cushion_width)], 3, color, thickness=cv2.FILLED)
+
+    else:
+        # 横長
+        # long
+        for i in range(1, 8):
+            cv2.circle(img, [long_points[i-1], int(table_offset - cushion_width)], 3, color, thickness=cv2.FILLED)
+            cv2.circle(img, [long_points[i-1], int(image_size[1] - table_offset + cushion_width)], 3, color, thickness=cv2.FILLED)
+        # short
+        for i in range(1, 4):
+            cv2.circle(img, [int(table_offset - cushion_width), short_points[i-1]], 3, color, thickness=cv2.FILLED)
+            cv2.circle(img, [int(image_size[0] - table_offset + cushion_width), short_points[i-1]], 3, color, thickness=cv2.FILLED)
+    
+    return img
+
+
 # perspective transformationで長方形へ変換
+# table_offsetは、クッションのさらに外側の幅
 def cut_and_transform(
     original_image,
     points,
-    short_hand_width,
-    long_hand_width,
+    short_hand_width, long_hand_width, cushion_width, table_offset,
     balls, ball_r,
+    is_draw_virtual_table,
+    is_portrait,
     out_image_path
 ):
     src_points = np.float32(points)
     print(src_points)
 
     # 縦向き: True, 横向き: False
-    is_portrait = False
     # 真上から見たビリヤード台の四隅の座標 (x, y) (通常は四角形)
     if is_portrait:
         # 縦向き
         dst_points = np.float32([
-            [0, 0],
-            [short_hand_width, 0],
-            [short_hand_width, long_hand_width],
-            [0, long_hand_width]
+            [table_offset, table_offset],
+            [table_offset + cushion_width*2 + short_hand_width, table_offset],
+            [table_offset + cushion_width*2 + short_hand_width, table_offset + cushion_width*2 + long_hand_width],
+            [table_offset, table_offset + cushion_width*2 + long_hand_width]
         ])
-        image_size = (short_hand_width, long_hand_width)
+        image_size = (short_hand_width + (cushion_width + table_offset)*2, long_hand_width + (cushion_width + table_offset)*2)
     else:
         # 横向き
         dst_points = np.float32([
-            [0, short_hand_width],
-            [0, 0],
-            [long_hand_width, 0],
-            [long_hand_width, short_hand_width]
+            [table_offset, table_offset + cushion_width*2 + short_hand_width],
+            [table_offset, table_offset],
+            [table_offset + cushion_width*2 + long_hand_width, table_offset],
+            [table_offset + cushion_width*2 + long_hand_width, table_offset + cushion_width*2 + short_hand_width]
         ])
-        image_size = (long_hand_width, short_hand_width)
+        image_size = (long_hand_width + (cushion_width + table_offset)*2, short_hand_width + (cushion_width + table_offset)*2)
+    image_size = (int(image_size[0]), int(image_size[1]))
 
     # ホモグラフィ行列を計算する
     matrix = cv2.getPerspectiveTransform(src_points, np.array(dst_points))
     matrix = np.float32(matrix)
     print(matrix)
 
-    # 透視変換を実行する
-    warped_image = cv2.warpPerspective(original_image, matrix, image_size)
+    if (is_draw_virtual_table):
+        # 仮想のテーブルを描画する
+        warped_image = draw_virtual_table(image_size, table_offset, cushion_width, is_portrait)
+    else:
+        # 実際の写真を透視変換で変形する
+        warped_image = cv2.warpPerspective(original_image, matrix, image_size)
     
 
     # ボール座標をperspective transformationして、絵を描く
@@ -260,15 +333,19 @@ def cut_and_transform(
 
 
 def main(image_path, out_image_path):
-    # 画像を読み込む
+    # 画像サイズ
     image_scale = 2.0
-    short_hand_width = int(142 * image_scale)
-    long_hand_width = int(284 * image_scale)
+    short_hand_width = int(142.2 * image_scale)
+    long_hand_width = int(284.4 * image_scale)
     ball_r = 6.15 / 2 * image_scale
+    cushion_width = 3.0 * image_scale
+    table_offset = cushion_width * 1.7 * image_scale
 
+    # 画像を読み込む
     original_image = cv2.imread(image_path)
 
     # ビリヤード台の角を取得
+    # この角は、クッションの角なので、テーブルサイズより少し広い
     corners = get_corner_points(original_image)
     print("corners")
     print(corners)
@@ -279,12 +356,16 @@ def main(image_path, out_image_path):
     print(rwy_balls)
 
     # perspective transformationで長方形へ変換
+    draw_virtual_table = True
+    is_portrait = True
     cut_and_transform(
         original_image, corners,
-        short_hand_width, long_hand_width,
-        rwy_balls, ball_r, out_image_path
+        short_hand_width, long_hand_width, cushion_width, table_offset,
+        rwy_balls, ball_r,
+        draw_virtual_table,
+        is_portrait,
+        out_image_path
     )
-
 
 
 if __name__=="__main__":
@@ -301,7 +382,9 @@ if __name__=="__main__":
                 os.path.basename(image_path)
             )[0] + "_out.png"
         )
-    #print(image_path)
-    #print(out_image_path)
+    print(image_path)
+    print(out_image_path)
     main(image_path, out_image_path)
 
+    # img = draw_virtual_table((1422/5, 2844/5))
+    # cv2.imwrite("./tmp/aa.png", img)
