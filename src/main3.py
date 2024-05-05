@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 from enum import Enum
+import sys
+import os
 
 
 # 画像から、ビリヤード台の四隅を返す
@@ -172,7 +174,7 @@ def get_ball_positions(cv_image_original, vertices):
 
 
 # perspective transformationで長方形へ変換
-def cut_and_transform(original_image, points, width, height, balls, ball_r):
+def cut_and_transform(original_image, points, width, height, balls, ball_r, out_image_path):
     src_points = np.float32(points)
     print(src_points)
 
@@ -215,11 +217,11 @@ def cut_and_transform(original_image, points, width, height, balls, ball_r):
     cv2.destroyAllWindows()
 
     # 結果の画像をファイルに保存する
-    cv2.imwrite('./tmp/warped_image.png', warped_image)
+    cv2.imwrite(out_image_path, warped_image)
 
 
 
-def main(image_path):
+def main(image_path, out_image_path):
     # 画像を読み込む
     image_scale = 2.0
     width = int(142 * image_scale)
@@ -239,11 +241,25 @@ def main(image_path):
     print(rwy_balls)
 
     # perspective transformationで長方形へ変換
-    cut_and_transform(original_image, corners, width, height, rwy_balls, ball_r)
+    cut_and_transform(original_image, corners, width, height, rwy_balls, ball_r, out_image_path)
 
 
 
 if __name__=="__main__":
     image_path = './images/sample1.jpg'
-    main(image_path)
+    out_image_path = './tmp/warped_image.png'
+
+    # コマンドライン引数を受け取る
+    args = sys.argv
+    if (len(args) > 1):
+        image_path = args[1]
+        out_image_path = os.path.join(
+            os.path.dirname(image_path),
+            os.path.splitext(
+                os.path.basename(image_path)
+            )[0] + "_out.png"
+        )
+    #print(image_path)
+    #print(out_image_path)
+    main(image_path, out_image_path)
 
