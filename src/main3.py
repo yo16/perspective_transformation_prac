@@ -4,6 +4,16 @@ from enum import Enum
 import sys
 import os
 
+COLOR_RANGE = {
+    "table":  {"lower": [80, 10, 50], "upper":[165,255,255]},
+    "white":  {"lower": [0, 0, 220], "upper":[180, 150, 255]},
+    "yellow": {"lower": [15, 0, 0], "upper":[30, 255, 255]},
+    "red":    [
+        {"lower": [0, 100, 50], "upper":[10, 255, 255]},
+        {"lower": [165, 50, 50], "upper":[180 ,255,255]}
+    ]
+}
+
 
 # 画像から、ビリヤード台の四隅を返す
 def get_corner_points(cv_image_original):
@@ -12,8 +22,8 @@ def get_corner_points(cv_image_original):
 
     # 輪郭を検出するための準備：前処理としてマスク画像を取得する
     hsv = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
-    lower_blue = np.array([80, 10, 50])  # 青色のHSV範囲の下限
-    upper_blue = np.array([165, 255, 255])  # 青色のHSV範囲の上限191
+    lower_blue = np.array(COLOR_RANGE["table"]["lower"])  # 青色のHSV範囲の下限
+    upper_blue = np.array(COLOR_RANGE["table"]["upper"])  # 青色のHSV範囲の上限191
     mask = cv2.inRange(hsv, lower_blue, upper_blue)
     output_path = './tmp/corner_mask.jpg'
     cv2.imwrite(output_path, mask)
@@ -82,10 +92,10 @@ def get_ball_positions(cv_image_original, vertices):
         mask = None
         if (color == Color.RED):
             # 赤色のHSV範囲
-            lower_red1 = np.array([0, 100, 50])
-            upper_red1 = np.array([10, 255, 255])
-            lower_red2 = np.array([165, 50, 50])
-            upper_red2 = np.array([180, 255, 255])
+            lower_red1 = np.array(COLOR_RANGE["red"][0]["lower"])
+            upper_red1 = np.array(COLOR_RANGE["red"][0]["upper"])
+            lower_red2 = np.array(COLOR_RANGE["red"][1]["lower"])
+            upper_red2 = np.array(COLOR_RANGE["red"][1]["upper"])
 
             # 赤色は、HSVで２か所で出るため、ORで結合する
             mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
@@ -97,16 +107,14 @@ def get_ball_positions(cv_image_original, vertices):
 
         elif (color == Color.YELLOW):
             # 黄色のHSV範囲
-            # lower_yellow = np.array([15, 100, 100])
-            # upper_yellow = np.array([30, 255, 255])
-            lower_yellow = np.array([15, 0, 0])
-            upper_yellow = np.array([30, 255, 255])
+            lower_yellow = np.array(COLOR_RANGE["yellow"]["lower"])
+            upper_yellow = np.array(COLOR_RANGE["yellow"]["upper"])
             mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
             cv2.imwrite('./tmp/detect_ball_yellow_mask.jpg', mask)
         else:
             # 白色のHSV範囲
-            lower_white = np.array([0, 0, 50])
-            upper_white = np.array([180, 150, 255])
+            lower_white = np.array(COLOR_RANGE["white"]["lower"])
+            upper_white = np.array(COLOR_RANGE["white"]["upper"])
             mask = cv2.inRange(hsv, lower_white, upper_white)
             cv2.imwrite('./tmp/detect_ball_white_mask.jpg', mask)
 
