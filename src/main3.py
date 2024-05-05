@@ -369,7 +369,8 @@ def main(image_path, out_image_path):
 
 
 if __name__=="__main__":
-    image_path = './images/sample1.jpg'
+    #image_path = './images/sample1.jpg'
+    image_path = './images/t1016.PNG'
     out_image_path = './tmp/warped_image.png'
 
     # コマンドライン引数を受け取る
